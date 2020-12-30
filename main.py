@@ -1,14 +1,12 @@
-from hackathon.Client import Client
-from hackathon.Server import Server
+from Client import startClient
+from Server import startServer
+import curses 
 
 
-def main():
-    server = Server()
-    server.startServer()
-    client=Client("adir_team")
-    client.listenToBroadcast()
-
+def main(stdscr):
+    startServer()
+    startClient(stdscr)
 
 
 if __name__ == '__main__':
-    main()
+    curses.wrapper(main)

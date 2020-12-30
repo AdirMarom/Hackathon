@@ -7,9 +7,9 @@ from socket import *
 from threading import *
 import struct
 
-SERVER_PORT = 2080
+SERVER_PORT = 2845
 SERVER_IP = gethostbyname(gethostname())
-dest_port=13117
+dest_port=13147
 
 
 class Server:
@@ -32,7 +32,7 @@ class Server:
         thread.start()
 
     def startTCP(self):
-        print("Server started, listening on IP address {self.ip}")
+        print("Server started, listening on IP address "+str(SERVER_IP))
 
         self.Broadcast()
         self.tcp_socket.listen()
@@ -40,6 +40,7 @@ class Server:
             # establish connection with client
             c, addr = self.tcp_socket.accept()
             lock=threading.Lock()
+            lock.acquire()
             self.numOfPlayer += 1
             if self.numOfPlayer == 1:
                 random.shuffle(self.teams)
@@ -73,6 +74,7 @@ class Server:
             data = c.recv(1024)
             if not data:
                 continue
+            print(f"RECEIVED: {data}")
             self.scores[index] += 1
 
 
@@ -103,7 +105,7 @@ class Server:
                 start_time = time.time()
                 server = socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP)
                 # Enable port reusage
-                server.setsockopt(SOL_SOCKET,SO_REUSEPORT, 1)
+                # server.setsockopt(SOL_SOCKET,SO_REUSEPORT, 1)
                 # Enable broadcasting mode
                 server.setsockopt(SOL_SOCKET,SO_BROADCAST, 1)
 
@@ -123,5 +125,9 @@ class Server:
                 self.start_game = True
 
 
+def startServer():
+    server = Server()
+    server.startServer()
 
-
+if __name__ == '__main__':
+    startServer()
