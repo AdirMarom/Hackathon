@@ -1,15 +1,16 @@
-import enum
+
 import threading
 import time
 from _thread import start_new_thread
 import random
+from select import select
 from socket import *
 from threading import *
 import struct
 
-SERVER_PORT = 2845
+SERVER_PORT = 2080
 SERVER_IP = gethostbyname(gethostname())
-dest_port=13147
+dest_port=13117
 
 
 class Server:
@@ -23,7 +24,7 @@ class Server:
         self.teams=[]
         self.start_game=False
         self.numOfPlayer=0
-        self.scores=[0,0,0,0]
+        self.scores=[0,0]
 
     def startServer(self):
         self.udp_socket.bind((SERVER_IP,SERVER_PORT))
@@ -62,19 +63,31 @@ class Server:
 
         # S Sending start message
         c.send(bytes(
-            f"Welcome to Keyboard Spamming Battle Royale.\nGroup 1:\n==\n{team1}Group 2:\n==\n{team2}\nStart pressing keys on your keyboard as fast as you can!!",
+            "Welcome to Keyboard Spamming Battle Royale.\nGroup 1:\n==\n{team1}Group 2:\n==\n{team2}\nStart pressing keys on your keyboard as fast as you can!!",
             encoding='utf8'))
 
         index = self.teams.index(TeamName) // 2
 
         # While not past 10 seconds - listen to key presses.
+        data=None
         start_time = time.time()
         while time.time() - start_time < 10:
             # data received from client
-            data = c.recv(1024)
+            try:
+                rlist,_,_= select([c],[],[],0.1)
+                if rlist:
+                    data = c.recv(1024)
+                    if not data:
+                        continue
+                    else:
+                        print(data)
+                    print(index)
+                    self.scores[index]+=1
+            except:
+                pass
+
             if not data:
                 continue
-            print(f"RECEIVED: {data}")
             self.scores[index] += 1
 
 
@@ -87,7 +100,7 @@ class Server:
         if (self.scores[0] < self.scores[1]):
             winner_team= team2
         # Game Over Message
-        message = f"\nGame over!\nGroup 1 typed in {self.scores[0]} characters. Group 2 typed in {self.scores[1]} characters.\nGroup {winner + 1} wins! \n\nCongratulations to the winners:\n==\n{winner_team}"
+        message = "\nGame over!\nGroup 1 typed in " +str(self.scores[0]) +" characters. Group 2 typed in"+ str(self.scores[1])+" characters.\n Group" + str(winner + 1)+" wins! \n\nCongratulations to the winners!"
         c.send(bytes(message, encoding='utf8'))
         self.start_game = False
         # connection closed
@@ -105,7 +118,7 @@ class Server:
                 start_time = time.time()
                 server = socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP)
                 # Enable port reusage
-                # server.setsockopt(SOL_SOCKET,SO_REUSEPORT, 1)
+                server.setsockopt(SOL_SOCKET,SO_REUSEPORT, 1)
                 # Enable broadcasting mode
                 server.setsockopt(SOL_SOCKET,SO_BROADCAST, 1)
 
@@ -125,9 +138,5 @@ class Server:
                 self.start_game = True
 
 
-def startServer():
-    server = Server()
-    server.startServer()
 
-if __name__ == '__main__':
-    startServer()
+

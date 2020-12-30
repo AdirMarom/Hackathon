@@ -4,21 +4,20 @@ import sys
 import os
 import time
 import random
-import keyboard
+from multiprocessing.connection import Listener
+from select import select
 from socket import *
-import curses 
-import struct
 
-SERVER_PORT = 2845
+SERVER_PORT = 2080
 client_IP = gethostbyname(gethostname())
-sorce_port=13147
+sorce_port=13117
 
 class Client():
-    def __init__(self,team_name,stdscr):
+    def __init__(self,team_name):
         self.teamName = team_name
-        self.stdscr = stdscr
         self.receievedData = False
         self.udp_socket = socket(AF_INET, SOCK_DGRAM)
+        self.tcp_socket = socket(AF_INET,SOCK_STREAM)
 
     def listenToBroadcast(self):
         # Creates a thread to start listening for broadcasts.
@@ -36,62 +35,71 @@ class Client():
             self.listen()
         # Receives Message
         message= self.udp_socket.recvfrom(1024)
-
         # Message Teardown.
         # magic_cookie = message[:4]
         # message_type = message[4]
         port_tcp = message[0][5:]
-        tmp=int.from_bytes(port_tcp, byteorder='big', signed=False)
+        server_port=int.from_bytes(port_tcp, byteorder='big', signed=False)
         m=message[1][0]
-        self.connectTCPServer(tmp,m)
+        self.connectTCPServer(server_port,m)
+
+    def on_press(self,key):
+        print('{0} pressed'.format(key))
+        key_str = str(key)
+        key_byte = key_str.encode("utf-8")
+        self.tcp_socket.sendall(key_byte)
+
+    def on_release(self,key):
+        print('{0} release'.format(key))
+        if key == key.esc:
+            # Stop listener
+            return False
+
+
 
 
     def connectTCPServer(self,port_tcp,m):
         s = socket(AF_INET,SOCK_STREAM)
         # connect to tcp server
-        print(port_tcp)
-        s.connect(('192.168.0.198', port_tcp))
+        #maybe because we are in ubuntu
+
+        s.connect(('127.0.1.1', port_tcp))
         # Sending team name
         s.send(bytes(self.teamName, encoding='utf8'))
 
-        # Receive data from Server
-        data = str(s.recv(1024), 'utf-8')
-        # Enable Curses
-        curses.noecho() # prevents user input from being echoed
-        curses.curs_set(0)
-        curses.cbreak()
-        self.stdscr.addstr(0, 0, data)
+        #with Listener(on_press=self.on_press) as listener:
+         #   # listener.join()
+          #  data = self.tcp_socket.recv(1024)
+           # listener.stop()
+            #print("\n\n" + data.decode("utf-8"))
 
-        # Setting blocking to false, Data to none and removing key presses representation
+
+       # # Receive data from Server
+        data = str(s.recv(1024), 'utf-8')
+        print(data)
+
+#
+       # # Setting blocking to false, Data to none and removing key presses representation
         data = None
-        s.settimeout(0.0)
+        s.setblocking(False)
         #capture characters without press enter?
-        # os.system("stty raw -echo")
+        os.system("stty raw -echo")
         while True:
-            # if data is recieved it will stop and print, else it will send every key press to the server.
+       #     # if data is recieved it will stop and print, else it will send every key press to the server.
             try:
                 data = s.recv(1024)
-                message = str(data, 'utf-8')
-                #self.receievedData = True
-                print(message)
             except:
-                c = self.stdscr.getch()
-                self.stdscr.move(7, 0)
-                if c > 0:
-                    s.send(struct.pack('b', c))
+                pass
+            if data:
+                os.system("stty -raw echo")
+                data = str(data, 'utf-8')
+                print(data)
+                break
+            else:
+                rlist,_,_= select([sys.stdin],[],[],0.1)
+                if rlist:
+                    print("got here")
+                    s.send("dor")
+                    c = sys.stdin.readline()
+                    s.send(bytes(c, encoding='utf8'))
         s.close()
-        # Disable Curses
-        self.stdscr.clear()
-        self.stdscr.keypad(0)
-        curses.nocbreak()
-        curses.echo()
-        curses.endwin()
-
-
-def startClient(stdscr):
-    stdscr.nodelay(1)
-    client=Client("dor_eitan",stdscr)
-    client.listenToBroadcast()
-        
-if __name__ == '__main__':
-    curses.wrapper(startClient)

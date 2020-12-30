@@ -4,9 +4,12 @@ import curses
 
 
 def main(stdscr):
-    startServer()
-    startClient(stdscr)
+    server=Server()
+    server.startServer()
+    client=Client("dor's team")
+    client.listenToBroadcast()
+    
 
 
-if __name__ == '__main__':
-    curses.wrapper(main)
+if _name_ == '_main_':
+    main()
