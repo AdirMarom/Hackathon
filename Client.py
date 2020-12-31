@@ -1,105 +1,87 @@
 import socket
 import threading
-import sys
-import os
-import time
-import random
-from multiprocessing.connection import Listener
-from select import select
 from socket import *
-
-SERVER_PORT = 2080
-client_IP = gethostbyname(gethostname())
-sorce_port=13117
+import getch
 
 class Client():
-    def __init__(self,team_name):
-        self.teamName = team_name
-        self.receievedData = False
+    def __init__(self, team_name):
+        self.broadcast = 13147
+        self.IP = gethostname()
+        self.team_name = team_name
         self.udp_socket = socket(AF_INET, SOCK_DGRAM)
-        self.tcp_socket = socket(AF_INET,SOCK_STREAM)
+        self.run = False
 
-    def listenToBroadcast(self):
-        # Creates a thread to start listening for broadcasts.
-        thread = threading.Thread(target=self.listen)
+    def start(self):
+        #starting a new client thread
+        thread = threading.Thread(target=self.listen_broadcast())
         thread.start()
 
-    def listen(self):
-        #s = socket(AF_INET,SOCK_DGRAM)
-        print( "Client started, listening for offer requests...")
-
-        # Binds client to listen on port self.port. (will be 13117)
+    def listen_broadcast(self):
+        # client accepting the udp massage
+        print("Client started - listening for broadcasts...")
         try:
-            self.udp_socket.bind(('', sorce_port))
+            self.udp_socket.bind(('', self.broadcast))
         except:
-            self.listen()
-        # Receives Message
-        message= self.udp_socket.recvfrom(1024)
-        # Message Teardown.
-        # magic_cookie = message[:4]
-        # message_type = message[4]
-        port_tcp = message[0][5:]
-        server_port=int.from_bytes(port_tcp, byteorder='big', signed=False)
-        m=message[1][0]
-        self.connectTCPServer(server_port,m)
+            self.listen_broadcast()
+        port_tcp = self.find_tcp()
+        self.connect_server_tcp(port_tcp)
 
-    def on_press(self,key):
-        print('{0} pressed'.format(key))
-        key_str = str(key)
-        key_byte = key_str.encode("utf-8")
-        self.tcp_socket.sendall(key_byte)
+    def find_tcp(self):
+        # trying to finding udp port
+        try:
+            message = self.udp_socket.recvfrom(1024)
+            port_tcp = message[0][5:]
+            port_tcp = int.from_bytes(port_tcp, byteorder='big', signed=False)
+            return port_tcp
+        except:
+            print("can't connect to udp socket")
 
-    def on_release(self,key):
-        print('{0} release'.format(key))
-        if key == key.esc:
-            # Stop listener
-            return False
+    def recieve_from_server(self, client_socket):
+        # this function charge on recieve massage from server
+        data = client_socket.recv(1024)
+        msge = str(data, 'utf-8')
+        print(msge)
+        self.run=False
 
 
-
-
-    def connectTCPServer(self,port_tcp,m):
-        s = socket(AF_INET,SOCK_STREAM)
-        # connect to tcp server
-        #maybe because we are in ubuntu
-
-        s.connect(('127.0.1.1', port_tcp))
-        # Sending team name
-        s.send(bytes(self.teamName, encoding='utf8'))
-
-        #with Listener(on_press=self.on_press) as listener:
-         #   # listener.join()
-          #  data = self.tcp_socket.recv(1024)
-           # listener.stop()
-            #print("\n\n" + data.decode("utf-8"))
-
-
-       # # Receive data from Server
-        data = str(s.recv(1024), 'utf-8')
-        print(data)
-
-#
-       # # Setting blocking to false, Data to none and removing key presses representation
-        data = None
-        s.setblocking(False)
-        #capture characters without press enter?
-        os.system("stty raw -echo")
-        while True:
-       #     # if data is recieved it will stop and print, else it will send every key press to the server.
+    def connection_tcp(self,port_tcp):
+        # create a tcp connection
+        try:
+            client_socket = socket(AF_INET, SOCK_STREAM)
+            print("Client connecting to server port:"+ port_tcp)
             try:
-                data = s.recv(1024)
+                client_socket.connect((self.IP, port_tcp))
+                client_socket.send(bytes(self.team_name, encoding='utf8'))
             except:
-                pass
-            if data:
-                os.system("stty -raw echo")
-                data = str(data, 'utf-8')
-                print(data)
-                break
-            else:
-                rlist,_,_= select([sys.stdin],[],[],0.1)
-                if rlist:
-                    print("got here")
-                    s.send("dor")
-                    c = sys.stdin.readline()
-                    s.send(bytes(c, encoding='utf8'))
-        s.close()
+                print("can't success to open socket")
+            recived_data = str(client_socket.recv(1024), 'utf-8')
+            print(recived_data)
+            return client_socket
+        except:
+            print("can't start tcp connection with server")
+
+
+
+    def connect_server_tcp(self, port_tcp):
+        # connecting to server and send him chars
+        client_socket=self.connection_tcp(port_tcp)
+        client_socket.settimeout(0.0)
+        self.run = True
+        while self.run:
+            try:
+                self.recieve_from_server(client_socket)
+            except:
+                try:
+                    chr = getch.getch()
+                    try:
+                        client_socket.send(bytes(chr, encoding='utf8'))
+                    except:
+                        self.recieve_from_server(client_socket)
+                except:
+                    continue
+                    #trying again
+        client_socket.close()
+
+    def start_client(self):
+        self.start()
+

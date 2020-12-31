@@ -1,15 +1,13 @@
-from Client import startClient
-from Server import startServer
-import curses 
+from Client import Client
+from Server import Server
 
 
-def main(stdscr):
+def main():
     server=Server()
-    server.startServer()
-    client=Client("dor's team")
-    client.listenToBroadcast()
+    server.start()
+    client=Client("adir_ben_team")
+    client.start_client()
     
-
 
 if _name_ == '_main_':
     main()
