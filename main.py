@@ -9,5 +9,5 @@ def main():
     client.start_client()
     
 
-if _name_ == '_main_':
+if __name__ == '__main__':
     main()

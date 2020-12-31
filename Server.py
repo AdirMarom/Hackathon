@@ -3,6 +3,7 @@ import threading
 import time
 from _thread import start_new_thread
 from socket import *
+from Style import Style
 
 
 class Server:
@@ -19,6 +20,7 @@ class Server:
         self.server_port = 2080
         self.UDPsocket = 0
         self.TCPsocket = 0
+        self.style=Style()
         # try to connect sockets
         try:
             self.UDPsocket = socket(AF_INET, SOCK_DGRAM)
@@ -39,8 +41,7 @@ class Server:
 
     def connect_TCP(self):
 
-        print("Server started, listening on IP address " + str(self.serverIP))
-
+        self.style.show("Server started, listening on IP address " + str(self.serverIP))
         threading.Thread(target=self.broadcast_details).start()
         self.TCPsocket.listen()
         while True:
@@ -76,6 +77,7 @@ class Server:
             data = socket.recv(1024)
             if not data:
                 continue
+            print(f"Team {name} sent: {str(data, 'utf-8')}")
             # update score
             self.players_scores[index] += 1
 

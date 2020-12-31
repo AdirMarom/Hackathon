@@ -46,19 +46,14 @@ class Client():
 
     def connection_tcp(self,port_tcp):
         # create a tcp connection
-        try:
-            client_socket = socket(AF_INET, SOCK_STREAM)
-            print("Client connecting to server port:"+ port_tcp)
-            try:
-                client_socket.connect((self.IP, port_tcp))
-                client_socket.send(bytes(self.team_name, encoding='utf8'))
-            except:
-                print("can't success to open socket")
-            recived_data = str(client_socket.recv(1024), 'utf-8')
-            print(recived_data)
-            return client_socket
-        except:
-            print("can't start tcp connection with server")
+        client_socket = socket(AF_INET, SOCK_STREAM)
+        print(f"Client connecting to server port: {port_tcp}")
+        client_socket.connect((self.IP, port_tcp))
+        client_socket.send(bytes(self.team_name, encoding='utf8'))
+        recived_data = str(client_socket.recv(1024), 'utf-8')
+        print(recived_data)
+        return client_socket
+
 
 
 
@@ -84,4 +79,3 @@ class Client():
 
     def start_client(self):
         self.start()
-
