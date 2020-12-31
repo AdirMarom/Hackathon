@@ -76,7 +76,6 @@ class Server:
             data = socket.recv(1024)
             if not data:
                 continue
-            print(f"{name} sent: {str(data, 'utf-8')}")
             # update score
             self.players_scores[index] += 1
 
